@@ -1,0 +1,5 @@
+.wwebjs_auth
+.wwebjs_cache
+expenses.db
+.env
+node_modules

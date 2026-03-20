@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Bot v2.0</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Expense Bot</h1>
+            <div class="status-badge">
+                <div id="status-dot" class="status-dot disconnected"></div>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Bot Management -->
+        <section id="bot-panel" class="card bot-panel" style="display:none;">
+            <h2>🤖 Link Housemate Phone</h2>
+            <p id="bot-msg" style="color:var(--text-secondary); font-size:0.9rem;">The bot is currently offline. Link a phone below.</p>
+            <div id="qr-container"></div>
+            
+            <div class="pairing-box">
+                <input type="text" id="partner-phone" placeholder="Enter Phone (919043832032)">
+                <button id="get-pairing-code" class="btn-primary" style="margin-top:0.5rem;">Get Pairing Image</button>
+                <div id="code-result"></div>
+            </div>
+            
+            <button id="restart-bot" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:0.8rem; margin-top:2rem; text-decoration: underline;">Full Restart System</button>
+        </section>
+
+        <!-- Main Expense UI -->
+        <main id="main-ui">
+            <section class="card">
+                <h2>✍️ Quick Entry</h2>
+                <div class="form-group">
+                    <input type="text" id="speech-input" placeholder="e.g., Milk 50 spent by Rokesh today">
+                </div>
+                <button id="save-btn" class="btn-primary">Add Expense</button>
+            </section>
+
+            <section class="card">
+                <h2>⚖️ House Balance</h2>
+                <div id="summary-data" class="summary-grid">
+                    <!-- Dynamic -->
+                </div>
+                <div id="total-house-banner" class="total-spent-banner">
+                    <!-- Dynamic -->
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>📜 History</h2>
+                <div id="history-list">
+                    <!-- Dynamic -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
