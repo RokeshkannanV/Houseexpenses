@@ -25,7 +25,7 @@ const client = new Client({
         headless: true, 
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
         // Specify path only for local Windows, let cloud find its own
-        ...(isCloud ? {} : { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' })
+        ...(isCloud ? { executablePath: '/usr/bin/google-chrome-stable' } : { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' })
     }
 });
 
