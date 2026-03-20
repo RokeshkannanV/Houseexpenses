@@ -24,8 +24,8 @@ const client = new Client({
     puppeteer: {
         headless: true, 
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        // Use default puppeteer path on cloud, or custom path on local Windows
-        executablePath: isCloud ? '/usr/bin/google-chrome' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+        // Specify path only for local Windows, let cloud find its own
+        ...(isCloud ? {} : { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' })
     }
 });
 
