@@ -88,11 +88,16 @@ async function handlePairingRequest(req, res) {
         await new Promise(r => setTimeout(r, 2000));
 
         // 1. Click Link with Phone Number
-        await page.evaluate(() => {
+        let clicked = await page.evaluate(() => {
             const elements = Array.from(document.querySelectorAll('span, div, button, a'));
             const el = elements.find(e => e.innerText && e.innerText.toLowerCase().includes('link with phone number'));
-            if (el) el.click();
+            if (el) { el.click(); return true; }
+            return false;
         });
+
+        if (!clicked) {
+            throw new Error('WhatsApp has blocked the "Phone Number" feature for this cloud server. See Alternative Solution below.');
+        }
 
         
         await new Promise(r => setTimeout(r, 3000));

@@ -162,13 +162,26 @@ document.getElementById('get-pairing-code').addEventListener('click', async (e) 
                 </div>
             `;
         } else {
-            alert(data.error || 'Connection busy or invalid number. Please try again.');
-            codeDisplay.innerHTML = '';
+            codeDisplay.innerHTML = `
+                <div style="background:#2a1111; border:2px solid #ff4444; padding:1.5rem; border-radius:1rem; margin-top:1rem;">
+                    <p style="color:#ff4444; font-weight:bold; margin-bottom:1rem;">❌ ${data.error || 'Connection Failed'}</p>
+                    <div style="background:var(--bg-color); padding:1rem; border-radius:0.5rem; text-align:left;">
+                        <h4 style="color:var(--primary); margin-bottom:0.5rem;">📱 Alternative Mobile Solution</h4>
+                        <p style="font-size:0.85rem; opacity:0.8; line-height:1.5;">Since WhatsApp is blocking cloud pairing, the absolute easiest workaround for mobile users is:</p>
+                        <ol style="font-size:0.85rem; opacity:0.8; margin-top:0.5rem; padding-left:1.5rem; line-height:1.5;">
+                            <li>Ask your housemate to open <b>houseexpenses-1.onrender.com</b> on their phone.</li>
+                            <li>The giant QR code will appear on <i>their</i> screen.</li>
+                            <li>Open WhatsApp on YOUR phone ➔ Linked Devices ➔ Link a device.</li>
+                            <li>Point your camera at your housemate's phone!</li>
+                        </ol>
+                        <p style="font-size:0.85rem; opacity:0.8; margin-top:0.5rem; color:var(--primary);">You only have to do this ONCE. It lasts forever!</p>
+                    </div>
+                </div>
+            `;
         }
     } catch (err) {
         console.error(err);
-        alert(err.message || 'Network error.');
-        codeDisplay.innerHTML = '';
+        codeDisplay.innerHTML = `<p style="color:#ff4444; margin-top:1rem;">Cannot reach server. Render is offline.</p>`;
     }
 });
 
