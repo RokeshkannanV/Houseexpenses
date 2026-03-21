@@ -59,14 +59,21 @@ app.post('/api/bot-pairing-code', async (req, res) => {
     let { phone } = req.body;
     try {
         phone = phone.replace(/\D/g, '');
-        if (botStatus.ready) return res.status(400).json({ error: 'Already connected!' });
+        console.log(`[PAIRING] Deep-starting official code for ${phone}...`);
         
-        await new Promise(r => setTimeout(r, 3000));
+        if (botStatus.ready) return res.status(400).json({ error: 'Already connected!' });
+
+        // WAIT ENGINE: Wait longer for the cloud browser to wake up fully!
+        await new Promise(r => setTimeout(r, 6000)); 
+        
         const code = await client.requestPairingCode(phone);
         pairingCode = code;
+        
+        console.log(`[PAIRING] SUCCESS! Code: ${code}`);
         res.json({ message: 'Success', code });
     } catch (err) {
-        res.status(500).json({ error: `Code error: ${err.message}` });
+        console.error('[PAIRING] ERROR:', err.stack);
+        res.status(500).json({ error: `Please: 1. Wait 20 seconds, 2. Refresh the website, 3. Try entering the number again.` });
     }
 });
 
