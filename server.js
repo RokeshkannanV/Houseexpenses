@@ -55,25 +55,59 @@ app.get('/api/bot-status', (req, res) => {
     }
 });
 
-// Request pairing code via API (The Turbo Official Way - FINAL)
+// Request pairing code via API (The Silicon Vision Way - TEXT EXTRACTION)
 app.post('/api/bot-pairing-code', async (req, res) => {
     let { phone } = req.body;
     phone = phone.replace(/\D/g, ''); 
     
     try {
-        console.log(`[PAIRING] Requesting official code for ${phone}...`);
+        console.log(`[PAIRING] Silicon Vision starting for ${phone}...`);
+        const page = client.pupPage;
+        if (!page) throw new Error('WhatsApp is waking up. Try in 10s.');
+
+        // 1. Force navigation to the pairing screen
+        await page.evaluate(() => {
+            const findAndClick = (txt) => {
+                const el = Array.from(document.querySelectorAll('span, div, button, a'))
+                            .find(e => e.innerText && e.innerText.toLowerCase().includes(txt.toLowerCase()));
+                if (el) el.click();
+            };
+            findAndClick('link with phone number');
+        });
         
-        if (botStatus.ready) return res.status(400).json({ error: 'Already connected!' });
+        await new Promise(r => setTimeout(r, 2000));
 
-        // Official fast way! 🚀
-        const code = await client.requestPairingCode(phone);
-        pairingCode = code; // THIS IS THE TEXT CODE
+        // 2. Type number and ENTER
+        await page.evaluate((ph) => {
+            const input = document.querySelector('input');
+            if (input) {
+                input.focus();
+                input.value = ph;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, phone);
+        await page.keyboard.press('Enter');
 
-        console.log(`[PAIRING] SUCCESS! Code: ${code}`);
-        res.json({ message: 'Success', code: code });
+        // 3. READ THE TEXT directly from the screen (Silicon Vision)
+        console.log('[PAIRING] Reading code from DOM...');
+        await page.waitForSelector('div[data-ref]', { timeout: 10000 });
+        
+        const codeText = await page.evaluate(() => {
+            return Array.from(document.querySelectorAll('div[data-ref]'))
+                        .map(d => d.innerText)
+                        .join('')
+                        .substring(0, 8);
+        });
+
+        if (!codeText) throw new Error('Could not find the code digits.');
+        
+        pairingCode = codeText;
+        console.log(`[PAIRING] SUCCESS! Text Code: ${codeText}`);
+        res.json({ message: 'Success', code: codeText });
+
     } catch (err) {
         console.error('[PAIRING] ERROR:', err.message);
-        res.status(500).json({ error: 'WhatsApp is busy. Please: 1. Wait 10s, 2. Refresh, 3. Try again.' });
+        res.status(500).json({ error: 'WhatsApp is slow. Refresh and try one last time in 5s.' });
     }
 });
 
