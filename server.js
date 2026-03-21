@@ -55,29 +55,26 @@ app.get('/api/bot-status', (req, res) => {
     }
 });
 
-// Request pairing code via API (The Silicon Vision Way - TEXT EXTRACTION)
+// Request pairing code via API (The Ghost Silicon Vision)
 app.post('/api/bot-pairing-code', async (req, res) => {
     let { phone } = req.body;
     phone = phone.replace(/\D/g, ''); 
     
     try {
-        console.log(`[PAIRING] Silicon Vision starting for ${phone}...`);
+        console.log(`[PAIRING] Ghost Vision for ${phone}...`);
         const page = client.pupPage;
-        if (!page) throw new Error('WhatsApp is waking up. Try in 10s.');
+        if (!page) return res.status(503).json({ error: 'Please wait 10s for the bot to wake up.' });
 
-        // 1. Force navigation to the pairing screen
+        // 1. Force the pairing screen
         await page.evaluate(() => {
-            const findAndClick = (txt) => {
-                const el = Array.from(document.querySelectorAll('span, div, button, a'))
-                            .find(e => e.innerText && e.innerText.toLowerCase().includes(txt.toLowerCase()));
-                if (el) el.click();
-            };
-            findAndClick('link with phone number');
+            const el = Array.from(document.querySelectorAll('span, div, button, a'))
+                        .find(e => e.innerText && e.innerText.toLowerCase().includes('link with phone number'));
+            if (el) el.click();
         });
         
         await new Promise(r => setTimeout(r, 2000));
 
-        // 2. Type number and ENTER
+        // 2. Type and Enter
         await page.evaluate((ph) => {
             const input = document.querySelector('input');
             if (input) {
@@ -88,26 +85,23 @@ app.post('/api/bot-pairing-code', async (req, res) => {
         }, phone);
         await page.keyboard.press('Enter');
 
-        // 3. READ THE TEXT directly from the screen (Silicon Vision)
-        console.log('[PAIRING] Reading code from DOM...');
-        await page.waitForSelector('div[data-ref]', { timeout: 10000 });
+        // 3. Speed-Read the Code
+        await page.waitForSelector('div[data-ref]', { timeout: 15000 });
         
         const codeText = await page.evaluate(() => {
             return Array.from(document.querySelectorAll('div[data-ref]'))
-                        .map(d => d.innerText)
-                        .join('')
-                        .substring(0, 8);
+                        .map(d => d.innerText).join('').substring(0, 8);
         });
 
-        if (!codeText) throw new Error('Could not find the code digits.');
+        if (!codeText) throw new Error('Code text not found on screen.');
         
         pairingCode = codeText;
-        console.log(`[PAIRING] SUCCESS! Text Code: ${codeText}`);
+        console.log(`[PAIRING] SUCCESS! Code: ${codeText}`);
         res.json({ message: 'Success', code: codeText });
 
     } catch (err) {
-        console.error('[PAIRING] ERROR:', err.message);
-        res.status(500).json({ error: 'WhatsApp is slow. Refresh and try one last time in 5s.' });
+        console.error('[PAIRING] FAILED:', err.message);
+        res.status(500).json({ error: 'System is busy. Refresh and try one last time in 10s.' });
     }
 });
 
