@@ -5,6 +5,7 @@ async function checkBotStatus() {
     const dot = document.getElementById('status-dot');
     const text = document.getElementById('status-text');
     const panel = document.getElementById('bot-panel');
+    const entryForm = document.getElementById('entry-form');
     const codeResult = document.getElementById('code-result');
     const qrContainer = document.getElementById('qr-container');
 
@@ -12,10 +13,12 @@ async function checkBotStatus() {
         dot.className = 'status-dot connected';
         text.innerText = '● Connected';
         panel.style.display = 'none';
+        entryForm.style.display = 'block'; // SHOW ENTRY ONLY WHEN CONNECTED
     } else {
         dot.className = 'status-dot disconnected';
         text.innerText = '○ Bot Offline';
         panel.style.display = 'block';
+        entryForm.style.display = 'none'; // HIDE ENTRY WHEN OFFLINE
         
         if (status.qr) {
             qrContainer.innerHTML = `
