@@ -1,40 +1,37 @@
 // Core State management
+let lastState = '';
+
 async function checkBotStatus() {
     const res = await fetch('/api/bot-status');
     const status = await res.json();
+    
+    // ONLY UPDATE IF THE STATE CHANGED (Prevents flickering/refreshing feel)
+    const currentState = JSON.stringify(status);
+    if (currentState === lastState) return;
+    lastState = currentState;
+
     const dot = document.getElementById('status-dot');
     const text = document.getElementById('status-text');
     const panel = document.getElementById('bot-panel');
-    const entryForm = document.getElementById('entry-form');
-    const codeResult = document.getElementById('code-result');
     const qrContainer = document.getElementById('qr-container');
 
     if (status.ready) {
         dot.className = 'status-dot connected';
         text.innerText = '● Connected';
         panel.style.display = 'none';
-        entryForm.style.display = 'block';
+        document.getElementById('entry-form').style.display = 'block';
     } else {
         dot.className = 'status-dot disconnected';
         text.innerText = '○ Bot Offline';
         panel.style.display = 'block';
-        entryForm.style.display = 'none';
+        document.getElementById('entry-form').style.display = 'none';
         
         if (status.qr && !status.pairingCode) {
             qrContainer.innerHTML = `
-                <div class="p-img-container" style="background:white; padding:10px; border-radius:10px; display:inline-block;">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(status.qr)}" />
+                <div class="qr-box" style="background:white; padding:1rem; border-radius:1rem; display:inline-block;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(status.qr)}" />
                 </div>
-                <p style="font-size:0.8rem; margin-top:5px; opacity:0.6;">Scan QR or use phone linking below</p>
-            `;
-        } else if (status.pairingCode) {
-            qrContainer.innerHTML = ''; // Hide QR when code is active
-            codeResult.innerHTML = `
-                <div class="code-box" style="background:var(--card-bg); border:2px solid var(--primary); padding:2rem; border-radius:1rem; margin:1rem 0;">
-                    <div style="font-size:0.8rem; opacity:0.6; margin-bottom:0.5rem;">Linking to: ${status.pairingCodePhone || 'Your Phone'}</div>
-                    <div style="font-size:2.5rem; font-weight:900; color:var(--primary); letter-spacing:6px; font-family:monospace;">${status.pairingCode}</div>
-                    <p style="font-size:0.9rem; margin-top:1rem; color:var(--text-secondary);">Type this code into your WhatsApp app now!</p>
-                </div>
+                <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.6;">Scan QR or use phone link below</p>
             `;
         }
     }
@@ -128,19 +125,31 @@ document.getElementById('save-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('get-pairing-code').addEventListener('click', async () => {
-    const phone = document.getElementById('partner-phone').value;
+    const phoneInput = document.getElementById('partner-phone');
+    const codeDisplay = document.getElementById('code-result');
+    const phone = phoneInput.value;
+    
     if (!phone) return alert('Enter phone with country code');
-    document.getElementById('code-result').innerHTML = '<p style="margin-top:1rem; color:var(--primary); font-weight:bold;">⚡ Bot is generating your code... (15s)</p>';
+    
+    codeDisplay.innerHTML = '<p style="margin-top:1rem; color:var(--primary); font-weight:bold; animation:pulse 1s infinite;">⚡ Generating Official Code...</p>';
+    
     const res = await fetch('/api/bot-pairing-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone })
     });
+    
     const data = await res.json();
-    if (!res.ok) {
-        alert(data.error || 'Unknown Error');
-        document.getElementById('code-result').innerHTML = '';
-        return;
+    if (res.ok && data.code) {
+        codeDisplay.innerHTML = `
+            <div style="background:var(--card-bg); border:2px solid var(--primary); padding:1.5rem; border-radius:1rem; margin-top:1rem;">
+                <div style="font-size:2.5rem; font-weight:900; color:var(--primary); letter-spacing:8px;">${data.code}</div>
+                <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.8;">Type this code on your phone now!</p>
+            </div>
+        `;
+    } else {
+        alert(data.error || 'Connection busy. Try again in 10s.');
+        codeDisplay.innerHTML = '';
     }
 });
 
