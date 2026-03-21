@@ -73,18 +73,27 @@ app.post('/api/bot-pairing-code', async (req, res) => {
         console.log(`[PAIRING] Activating Remote Eye for ${phone}...`);
         
         const page = client.pupPage;
-        if (!page) throw new Error('WhatsApp page not available. Please click "Restart Bot".');
+        if (!page) {
+            console.error('[PAIRING] Page object is NULL');
+            return res.status(503).json({ error: 'WhatsApp is still waking up. Please wait 30 seconds and try again.' });
+        }
 
-        // 1. Restart page for clean state
-        await page.reload({ waitUntil: 'networkidle0' });
+        // 1. Give it a clean start
+        await page.reload({ waitUntil: 'networkidle2' });
+        await new Promise(r => setTimeout(r, 5000)); // Wait for splash screen to clear
 
         // 2. Click "Link with phone number"
-        await page.evaluate(async () => {
+        const clicked = await page.evaluate(async () => {
             const el = Array.from(document.querySelectorAll('span, div, button, a'))
                         .find(e => e.innerText && e.innerText.toLowerCase().includes('link with phone number'));
-            if (el) el.click();
+            if (el) { el.click(); return true; }
+            return false;
         });
         
+        if (!clicked) {
+            console.warn('[PAIRING] "Link with phone number" not found. Might be on QR screen.');
+        }
+
         await new Promise(r => setTimeout(r, 2000));
 
         // 3. Type number and ENTER
@@ -98,16 +107,16 @@ app.post('/api/bot-pairing-code', async (req, res) => {
         }, phone);
         await page.keyboard.press('Enter');
 
-        // 4. Wait 3s and take a high-res screenshot
+        // 4. Wait for the code to appear
         console.log('[PAIRING] Capturing code image...');
-        await new Promise(r => setTimeout(r, 5000));
+        await new Promise(r => setTimeout(r, 6000));
         const screenshot = await page.screenshot({ encoding: 'base64' });
 
         pairingCode = `data:image/png;base64,${screenshot}`;
         res.json({ message: 'Success', codeImg: pairingCode });
     } catch (err) {
-        console.error('[PAIRING] FAILED:', err.message);
-        res.status(500).json({ error: err.message });
+        console.error('[PAIRING] CRITICAL ERROR:', err.stack);
+        res.status(500).json({ error: 'Server was too slow to respond. Please try "Restart Bot" and wait 1 minute.' });
     }
 });
 
