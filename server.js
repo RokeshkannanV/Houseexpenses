@@ -61,8 +61,8 @@ app.get('/api/bot-status', (req, res) => {
     res.json({ ...botStatus, qr: botStatus.qr || lastQR, pairingCode, pairingCodePhone });
 });
 
-// The Official Official Pairing Endpoint
-app.post('/api/bot-pairing-code', async (req, res) => {
+// Dual Support for Cached/New Browsers
+async function handlePairingRequest(req, res) {
     let { phone } = req.body;
     if (!phone) return res.status(400).json({ error: 'Phone is required' });
     
@@ -71,22 +71,38 @@ app.post('/api/bot-pairing-code', async (req, res) => {
     try {
         console.log(`[PAIRING] Requesting official code for ${phone}...`);
         
-        if (botStatus.ready) return res.status(400).json({ error: 'Already connected!' });
+        if (botStatus.ready) {
+            return res.status(400).json({ error: 'Bot is already connected.', alreadyConnected: true });
+        }
+        
+        if (!lastQR && !botStatus.qr) {
+            return res.status(503).json({ error: 'Bot is still initializing. Wait 15s and try again.' });
+        }
 
         // THE OFFICIAL WAY
         const code = await client.requestPairingCode(phone);
         
+        if (!code) throw new Error('WhatsApp returned an empty code.');
+
         // Format as XXXX-XXXX
         pairingCode = code.length === 8 ? `${code.substring(0, 4)}-${code.substring(4, 8)}` : code;
         pairingCodePhone = phone;
 
         console.log(`[PAIRING] SUCCESS! Code: ${pairingCode}`);
-        res.json({ message: 'Success', code: pairingCode });
+        res.json({ success: true, message: 'Success', code: pairingCode });
     } catch (err) {
         console.error('[PAIRING] ERROR:', err.message);
-        res.status(500).json({ error: `WhatsApp was too slow. Try again in 15 seconds.` });
+        let msg = 'WhatsApp was too slow. Try again in 15 seconds.';
+        if (err.message.includes('rate')) msg = 'Too many attempts. Wait 60 seconds.';
+        if (err.message.includes('registered')) msg = 'Phone number not registered on WhatsApp.';
+        res.status(500).json({ error: msg });
     }
-});
+}
+
+// Support both endpoint names to completely bypass browser caching issues!
+app.post('/api/bot-pairing-code', handlePairingRequest);
+app.post('/api/request-pairing-code', handlePairingRequest);
+
 
 app.get('/api/expenses', (req, res) => {
     const rows = db.prepare('SELECT * FROM expenses ORDER BY date DESC').all();
