@@ -61,62 +61,30 @@ client.initialize().catch(err => console.error('Init error:', err));
 
 let pairingCode = null;
 
-// Bot status API
 app.get('/api/bot-status', (req, res) => {
-    res.json({ ...botStatus, pairingCode });
+    // Return lastQR if we don't have a direct status.qr yet
+    res.json({ ...botStatus, qr: botStatus.qr || lastQR, pairingCode });
 });
 
-// Request pairing code via API (Remote Eye Strategy - Screenshot)
+// Request pairing code via API (The Turbo Official Way)
 app.post('/api/bot-pairing-code', async (req, res) => {
     const { phone } = req.body;
     try {
-        console.log(`[PAIRING] Activating Remote Eye for ${phone}...`);
+        console.log(`[PAIRING] Requesting official code for ${phone}...`);
         
-        const page = client.pupPage;
-        if (!page) {
-            console.error('[PAIRING] Page object is NULL');
-            return res.status(503).json({ error: 'WhatsApp is still waking up. Please wait 30 seconds and try again.' });
+        if (botStatus.ready) {
+            return res.status(400).json({ error: 'Bot is already connected!' });
         }
 
-        // 1. Give it a clean start
-        await page.reload({ waitUntil: 'networkidle2' });
-        await new Promise(r => setTimeout(r, 5000)); // Wait for splash screen to clear
-
-        // 2. Click "Link with phone number"
-        const clicked = await page.evaluate(async () => {
-            const el = Array.from(document.querySelectorAll('span, div, button, a'))
-                        .find(e => e.innerText && e.innerText.toLowerCase().includes('link with phone number'));
-            if (el) { el.click(); return true; }
-            return false;
-        });
+        // The Official Fast Way!
+        const code = await client.requestPairingCode(phone);
         
-        if (!clicked) {
-            console.warn('[PAIRING] "Link with phone number" not found. Might be on QR screen.');
-        }
-
-        await new Promise(r => setTimeout(r, 2000));
-
-        // 3. Type number and ENTER
-        await page.evaluate((ph) => {
-            const input = document.querySelector('input');
-            if (input) {
-                input.focus();
-                input.value = ph;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }, phone);
-        await page.keyboard.press('Enter');
-
-        // 4. Wait for the code to appear
-        console.log('[PAIRING] Capturing code image...');
-        await new Promise(r => setTimeout(r, 6000));
-        const screenshot = await page.screenshot({ encoding: 'base64' });
-
-        pairingCode = `data:image/png;base64,${screenshot}`;
-        res.json({ message: 'Success', codeImg: pairingCode });
+        pairingCode = code;
+        console.log(`[PAIRING] SUCCESS! Code: ${code}`);
+        res.json({ message: 'Success', code: code });
     } catch (err) {
-        console.error('[PAIRING] CRITICAL ERROR:', err.stack);
-        res.status(500).json({ error: 'Server was too slow to respond. Please try "Restart Bot" and wait 1 minute.' });
+        console.error('[PAIRING] ERROR:', err.message);
+        res.status(500).json({ error: 'Could not generate code. Please refresh the page and try again.' });
     }
 });
 

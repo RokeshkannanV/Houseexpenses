@@ -30,12 +30,18 @@ async function checkBotStatus() {
         }
 
         if (status.pairingCode) {
-            codeResult.innerHTML = `
-                <div class="p-img-container">
-                    <img src="${status.pairingCode}" style="max-width:100%;" />
-                </div>
-                <p style="font-size:0.8rem; color:var(--primary);">Read the 8-digit code from this screenshot</p>
-            `;
+            // Check if it's an image or just text
+            if (status.pairingCode.startsWith('data:image')) {
+                codeResult.innerHTML = `
+                    <div class="p-img-container"><img src="${status.pairingCode}" style="max-width:100%;" /></div>
+                    <p style="font-size:0.8rem; color:var(--primary);">Read the 8-digit code from this screenshot</p>
+                `;
+            } else {
+                codeResult.innerHTML = `
+                    <div style="font-size:2rem; font-weight:800; color:var(--primary); margin:1rem 0; letter-spacing:4px;">${status.pairingCode}</div>
+                    <p style="font-size:0.8rem; opacity:0.6;">Type this official code in your phone now!</p>
+                `;
+            }
         }
     }
 }
