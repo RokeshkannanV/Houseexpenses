@@ -13,35 +13,29 @@ async function checkBotStatus() {
         dot.className = 'status-dot connected';
         text.innerText = '● Connected';
         panel.style.display = 'none';
-        entryForm.style.display = 'block'; // SHOW ENTRY ONLY WHEN CONNECTED
+        entryForm.style.display = 'block';
     } else {
         dot.className = 'status-dot disconnected';
         text.innerText = '○ Bot Offline';
         panel.style.display = 'block';
-        entryForm.style.display = 'none'; // HIDE ENTRY WHEN OFFLINE
+        entryForm.style.display = 'none';
         
-        if (status.qr) {
+        if (status.qr && !status.pairingCode) {
             qrContainer.innerHTML = `
-                <div class="p-img-container">
+                <div class="p-img-container" style="background:white; padding:10px; border-radius:10px; display:inline-block;">
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(status.qr)}" />
                 </div>
-                <p style="font-size:0.8rem; opacity:0.6;">Scan QR or use phone linking below</p>
+                <p style="font-size:0.8rem; margin-top:5px; opacity:0.6;">Scan QR or use phone linking below</p>
             `;
-        }
-
-        if (status.pairingCode) {
-            // Check if it's an image or just text
-            if (status.pairingCode.startsWith('data:image')) {
-                codeResult.innerHTML = `
-                    <div class="p-img-container"><img src="${status.pairingCode}" style="max-width:100%;" /></div>
-                    <p style="font-size:0.8rem; color:var(--primary);">Read the 8-digit code from this screenshot</p>
-                `;
-            } else {
-                codeResult.innerHTML = `
-                    <div style="font-size:2rem; font-weight:800; color:var(--primary); margin:1rem 0; letter-spacing:4px;">${status.pairingCode}</div>
-                    <p style="font-size:0.8rem; opacity:0.6;">Type this official code in your phone now!</p>
-                `;
-            }
+        } else if (status.pairingCode) {
+            qrContainer.innerHTML = ''; // Hide QR when code is active
+            codeResult.innerHTML = `
+                <div class="code-box" style="background:var(--card-bg); border:2px solid var(--primary); padding:2rem; border-radius:1rem; margin:1rem 0;">
+                    <div style="font-size:0.8rem; opacity:0.6; margin-bottom:0.5rem;">Linking to: ${status.pairingCodePhone || 'Your Phone'}</div>
+                    <div style="font-size:2.5rem; font-weight:900; color:var(--primary); letter-spacing:6px; font-family:monospace;">${status.pairingCode}</div>
+                    <p style="font-size:0.9rem; margin-top:1rem; color:var(--text-secondary);">Type this code into your WhatsApp app now!</p>
+                </div>
+            `;
         }
     }
 }
@@ -156,6 +150,6 @@ document.getElementById('restart-bot').addEventListener('click', async () => {
 });
 
 // Initialization
-setInterval(checkBotStatus, 4000);
+setInterval(checkBotStatus, 1500); // Check every 1.5 seconds for instant updates
 checkBotStatus();
 loadData();
