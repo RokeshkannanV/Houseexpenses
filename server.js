@@ -55,26 +55,30 @@ app.get('/api/bot-status', (req, res) => {
     }
 });
 
-// Request pairing code via API (The Ghost Silicon Vision)
+// Request pairing code via API (The Super-Clean Final Fix)
 app.post('/api/bot-pairing-code', async (req, res) => {
     let { phone } = req.body;
     phone = phone.replace(/\D/g, ''); 
     
     try {
-        console.log(`[PAIRING] Ghost Vision for ${phone}...`);
+        console.log(`[PAIRING] Fresh start for ${phone}...`);
         const page = client.pupPage;
-        if (!page) return res.status(503).json({ error: 'Please wait 10s for the bot to wake up.' });
+        if (!page) return res.status(503).json({ error: 'Bot is waking up. Wait 10s.' });
 
-        // 1. Force the pairing screen
+        // 1. REFRESH EVERYTHING for a clean state
+        await page.reload({ waitUntil: 'networkidle2' });
+        await new Promise(r => setTimeout(r, 6000));
+
+        // 2. Click "Link with phone number"
         await page.evaluate(() => {
             const el = Array.from(document.querySelectorAll('span, div, button, a'))
                         .find(e => e.innerText && e.innerText.toLowerCase().includes('link with phone number'));
             if (el) el.click();
         });
         
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 3000));
 
-        // 2. Type and Enter
+        // 3. Type number and ENTER
         await page.evaluate((ph) => {
             const input = document.querySelector('input');
             if (input) {
@@ -85,15 +89,19 @@ app.post('/api/bot-pairing-code', async (req, res) => {
         }, phone);
         await page.keyboard.press('Enter');
 
-        // 3. Speed-Read the Code
-        await page.waitForSelector('div[data-ref]', { timeout: 15000 });
+        // 4. WAIT and SEARCH for the 8-digit pattern
+        console.log('[PAIRING] Searching for code pattern...');
+        await new Promise(r => setTimeout(r, 6000)); // Wait for animation
         
         const codeText = await page.evaluate(() => {
-            return Array.from(document.querySelectorAll('div[data-ref]'))
-                        .map(d => d.innerText).join('').substring(0, 8);
+            // Find ALL div contents and look for an 8-character string with letters and numbers
+            const allText = Array.from(document.querySelectorAll('div, span'))
+                                .map(e => e.innerText)
+                                .filter(t => t && t.length >= 8 && t.length <= 10 && /^[A-Z0-9]+[ -]?[A-Z0-9]+$/.test(t));
+            return allText[0] || null;
         });
 
-        if (!codeText) throw new Error('Code text not found on screen.');
+        if (!codeText) throw new Error('Could not find the code. Please try again.');
         
         pairingCode = codeText;
         console.log(`[PAIRING] SUCCESS! Code: ${codeText}`);
@@ -101,7 +109,7 @@ app.post('/api/bot-pairing-code', async (req, res) => {
 
     } catch (err) {
         console.error('[PAIRING] FAILED:', err.message);
-        res.status(500).json({ error: 'System is busy. Refresh and try one last time in 10s.' });
+        res.status(500).json({ error: 'WhatsApp was too slow. Wait 10s and try again.' });
     }
 });
 
