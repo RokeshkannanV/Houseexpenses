@@ -26,7 +26,6 @@ const client = new Client({
             '--no-zygote', '--disable-software-rasterizer',
             '--disable-extensions', '--mute-audio',
             '--disable-notifications', '--no-first-run',
-            '--blink-settings=imagesEnabled=false',
             // CRITICAL: We REMOVED --single-process because it causes giant memory leaks on Render!
         ],
         ...(isCloud ? { executablePath: '/usr/bin/google-chrome-stable' } : { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' })
