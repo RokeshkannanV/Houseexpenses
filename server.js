@@ -84,16 +84,16 @@ app.post('/api/bot-pairing-code', async (req, res) => {
         }
 
         // The Official Fast Way (with a 2-second buffer)!
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 4000)); 
         const code = await client.requestPairingCode(phone);
         
         pairingCode = code;
         console.log(`[PAIRING] SUCCESS! Code: ${code}`);
         res.json({ message: 'Success', code: code });
     } catch (err) {
-        console.error('[PAIRING] ERROR:', err.message);
+        console.error('[PAIRING] ERROR:', err.stack);
         res.status(500).json({ 
-            error: 'WhatsApp was too slow to respond. Please: 1. Wait 30 seconds, 2. Refresh the page, 3. Try again.' 
+            error: `WhatsApp error: ${err.message}` 
         });
     }
 });

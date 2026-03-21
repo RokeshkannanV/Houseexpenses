@@ -137,11 +137,17 @@ document.getElementById('get-pairing-code').addEventListener('click', async () =
     const phone = document.getElementById('partner-phone').value;
     if (!phone) return alert('Enter phone with country code');
     document.getElementById('code-result').innerHTML = '<p style="margin-top:1rem; opacity:0.5;">Activating Remote Eye... please wait</p>';
-    await fetch('/api/bot-pairing-code', {
+    const res = await fetch('/api/bot-pairing-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone })
     });
+    const data = await res.json();
+    if (!res.ok) {
+        alert(data.error || 'Unknown Error');
+        document.getElementById('code-result').innerHTML = '';
+        return;
+    }
 });
 
 document.getElementById('restart-bot').addEventListener('click', async () => {
