@@ -124,31 +124,50 @@ document.getElementById('save-btn').addEventListener('click', async () => {
     loadData();
 });
 
-document.getElementById('get-pairing-code').addEventListener('click', async () => {
+document.getElementById('get-pairing-code').addEventListener('click', async (e) => {
+    e.preventDefault(); // Stop any tricky browser reloads
     const phoneInput = document.getElementById('partner-phone');
     const codeDisplay = document.getElementById('code-result');
-    const phone = phoneInput.value;
+    let phone = phoneInput.value;
     
-    if (!phone) return alert('Enter phone with country code');
+    // Strip everything except digits in frontend too, just in case
+    phone = phone.replace(/\D/g, ''); 
     
-    codeDisplay.innerHTML = '<p style="margin-top:1rem; color:var(--primary); font-weight:bold; animation:pulse 1s infinite;">⚡ Generating Official Code...</p>';
+    if (!phone || phone.length < 10) {
+        return alert('Please enter a valid phone number with country code (e.g. 919876543210)');
+    }
     
-    const res = await fetch('/api/bot-pairing-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
-    });
+    codeDisplay.innerHTML = '<p style="margin-top:1rem; color:var(--primary); font-weight:bold; animation:pulse 1s infinite;">⚡ Communicating with WhatsApp... this takes a few seconds.</p>';
     
-    const data = await res.json();
-    if (res.ok && data.code) {
-        codeDisplay.innerHTML = `
-            <div style="background:var(--card-bg); border:2px solid var(--primary); padding:1.5rem; border-radius:1rem; margin-top:1rem;">
-                <div style="font-size:2.5rem; font-weight:900; color:var(--primary); letter-spacing:8px;">${data.code}</div>
-                <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.8;">Type this code on your phone now!</p>
-            </div>
-        `;
-    } else {
-        alert(data.error || 'Connection busy. Try again in 10s.');
+    try {
+        // NOTE: The endpoint was renamed to /api/request-pairing-code in the backend!
+        const res = await fetch('/api/request-pairing-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone })
+        });
+        
+        let data;
+        try {
+            data = await res.json();
+        } catch (jsonErr) {
+            throw new Error('Server returned an invalid response. The bot might be restarting.');
+        }
+
+        if (res.ok && data.success && data.code) {
+            codeDisplay.innerHTML = `
+                <div style="background:var(--card-bg); border:2px solid var(--primary); padding:1.5rem; border-radius:1rem; margin-top:1rem; animation: slideIn 0.3s ease-out;">
+                    <div style="font-size:2.5rem; font-weight:900; color:var(--primary); letter-spacing:8px; text-shadow: 0 0 10px rgba(99, 102, 241, 0.3);">${data.code}</div>
+                    <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.8;">Type this code on your phone now!</p>
+                </div>
+            `;
+        } else {
+            alert(data.error || 'Connection busy or invalid number. Please try again.');
+            codeDisplay.innerHTML = '';
+        }
+    } catch (err) {
+        console.error(err);
+        alert(err.message || 'Network error.');
         codeDisplay.innerHTML = '';
     }
 });
