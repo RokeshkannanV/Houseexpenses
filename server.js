@@ -73,13 +73,59 @@ async function handlePairingRequest(req, res) {
             return res.status(503).json({ error: 'Bot is still initializing. Wait 15s and try again.' });
         }
 
-        // THE OFFICIAL WAY
-        const code = await client.requestPairingCode(phone);
+        // THE MANUAL BULLETPROOF WAY (Bypasses library bugs)
+        const page = client.pupPage;
+        if (!page) throw new Error('Browser page not available.');
+
+        // 1. Click Link with Phone Number
+        await page.evaluate(() => {
+            const elements = Array.from(document.querySelectorAll('span, div, button, a'));
+            const el = elements.find(e => e.innerText && e.innerText.toLowerCase().includes('link with phone number'));
+            if (el) el.click();
+        });
         
-        if (!code) throw new Error('WhatsApp returned an empty code.');
+        await new Promise(r => setTimeout(r, 3000));
+
+        // 2. Type Phone Number and Enter
+        await page.evaluate((ph) => {
+            const input = document.querySelector('input');
+            if (input) {
+                input.value = '';
+                input.focus();
+                input.value = ph;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, phone);
+
+        await new Promise(r => setTimeout(r, 1000));
+        await page.keyboard.press('Enter');
+
+        // 3. Search for the Code
+        let codeFound = null;
+        for (let i = 0; i < 20; i++) {
+            const text = await page.evaluate(() => {
+                // Try to find exact code grid (divs with data-ref)
+                const digits = Array.from(document.querySelectorAll('div[data-ref]')).map(d => d.innerText).join('');
+                if (digits && digits.length >= 8) return digits.substring(0, 8);
+                
+                // Fallback: look for exactly 8 letter/number code matching the format
+                const anyCode = Array.from(document.querySelectorAll('span, div'))
+                                    .map(e => e.innerText)
+                                    .find(t => t && /^[A-Z0-9]{4}[ -]?[A-Z0-9]{4}$/.test(t));
+                return anyCode ? anyCode.replace(/[^A-Z0-9]/g, '').substring(0, 8) : null;
+            });
+
+            if (text) {
+                codeFound = text;
+                break;
+            }
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        if (!codeFound) throw new Error('Code did not appear on screen within 20s.');
 
         // Format as XXXX-XXXX
-        pairingCode = code.length === 8 ? `${code.substring(0, 4)}-${code.substring(4, 8)}` : code;
+        pairingCode = `${codeFound.substring(0, 4)}-${codeFound.substring(4, 8)}`;
         pairingCodePhone = phone;
 
         console.log(`[PAIRING] SUCCESS! Code: ${pairingCode}`);
