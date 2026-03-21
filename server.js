@@ -55,25 +55,37 @@ app.get('/api/bot-status', (req, res) => {
     }
 });
 
+// Request pairing code via API (The High-Persistence Way)
 app.post('/api/bot-pairing-code', async (req, res) => {
     let { phone } = req.body;
-    try {
-        phone = phone.replace(/\D/g, '');
-        console.log(`[PAIRING] Deep-starting official code for ${phone}...`);
-        
-        if (botStatus.ready) return res.status(400).json({ error: 'Already connected!' });
-
-        // WAIT ENGINE: Wait longer for the cloud browser to wake up fully!
-        await new Promise(r => setTimeout(r, 6000)); 
-        
-        const code = await client.requestPairingCode(phone);
-        pairingCode = code;
-        
-        console.log(`[PAIRING] SUCCESS! Code: ${code}`);
-        res.json({ message: 'Success', code });
-    } catch (err) {
-        console.error('[PAIRING] ERROR:', err.stack);
-        res.status(500).json({ error: `Please: 1. Wait 20 seconds, 2. Refresh the website, 3. Try entering the number again.` });
+    phone = phone.replace(/\D/g, ''); 
+    
+    // RETRY LOOP (3 TIMES)
+    for (let i = 1; i <= 3; i++) {
+        try {
+            console.log(`[PAIRING] Attempt ${i}/3 for ${phone}...`);
+            await new Promise(r => setTimeout(r, 4000)); 
+            
+            const code = await client.requestPairingCode(phone);
+            pairingCode = code;
+            console.log(`[PAIRING] Attempt ${i} SUCCESS! Code: ${code}`);
+            return res.json({ message: 'Success', code: code });
+            
+        } catch (err) {
+            console.warn(`[PAIRING] Attempt ${i} failed. Error: ${err.message}`);
+            // If it's the last attempt, try a screenshot fallback
+            if (i === 3) {
+                try {
+                    console.log('[PAIRING] FINAL FALLBACK: Capturing Screenshot...');
+                    const page = client.pupPage;
+                    const screenshot = await page.screenshot({ encoding: 'base64' });
+                    pairingCode = `data:image/png;base64,${screenshot}`;
+                    return res.json({ message: 'Success', code: pairingCode });
+                } catch (e) {
+                    return res.status(500).json({ error: 'WhatsApp is temporarily busy. Please wait 1 minute and refresh.' });
+                }
+            }
+        }
     }
 });
 
