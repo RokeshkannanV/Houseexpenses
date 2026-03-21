@@ -55,37 +55,57 @@ app.get('/api/bot-status', (req, res) => {
     }
 });
 
-// Request pairing code via API (The High-Persistence Way)
+// Request pairing code via API (The Unstoppable Way - Manual Interaction)
 app.post('/api/bot-pairing-code', async (req, res) => {
     let { phone } = req.body;
     phone = phone.replace(/\D/g, ''); 
     
-    // RETRY LOOP (3 TIMES)
-    for (let i = 1; i <= 3; i++) {
-        try {
-            console.log(`[PAIRING] Attempt ${i}/3 for ${phone}...`);
-            await new Promise(r => setTimeout(r, 4000)); 
-            
-            const code = await client.requestPairingCode(phone);
-            pairingCode = code;
-            console.log(`[PAIRING] Attempt ${i} SUCCESS! Code: ${code}`);
-            return res.json({ message: 'Success', code: code });
-            
-        } catch (err) {
-            console.warn(`[PAIRING] Attempt ${i} failed. Error: ${err.message}`);
-            // If it's the last attempt, try a screenshot fallback
-            if (i === 3) {
-                try {
-                    console.log('[PAIRING] FINAL FALLBACK: Capturing Screenshot...');
-                    const page = client.pupPage;
-                    const screenshot = await page.screenshot({ encoding: 'base64' });
-                    pairingCode = `data:image/png;base64,${screenshot}`;
-                    return res.json({ message: 'Success', code: pairingCode });
-                } catch (e) {
-                    return res.status(500).json({ error: 'WhatsApp is temporarily busy. Please wait 1 minute and refresh.' });
-                }
+    try {
+        console.log(`[PAIRING] Deep-starting manual interaction for ${phone}...`);
+        const page = client.pupPage;
+        if (!page) throw new Error('WhatsApp not ready. Try "Restart Bot" first.');
+
+        // 1. Prepare the page
+        await page.reload({ waitUntil: 'networkidle2' });
+        await new Promise(r => setTimeout(r, 6000)); // Wait for initial load
+
+        // 2. Click "Link with phone number" text using internal search
+        await page.evaluate(() => {
+            const findAndClick = (text) => {
+                const el = Array.from(document.querySelectorAll('span, div, button, a'))
+                            .find(e => e.innerText && e.innerText.toLowerCase().includes(text.toLowerCase()));
+                if (el) el.click();
+            };
+            findAndClick('link with phone number');
+        });
+        
+        await new Promise(r => setTimeout(r, 3000)); // Wait for input to appear
+
+        // 3. Type number and ENTER
+        await page.evaluate((ph) => {
+            const input = document.querySelector('input');
+            if (input) {
+                input.focus();
+                input.value = ph;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             }
-        }
+        }, phone);
+        await page.keyboard.press('Enter');
+
+        // 4. WAIT until the code is actually ON the screen
+        console.log('[PAIRING] Waiting for code digits to appear...');
+        await page.waitForSelector('div[data-ref]', { timeout: 15000 });
+
+        // 5. Final Screenshot (Now it is guaranteed to have the code!)
+        const screenshot = await page.screenshot({ encoding: 'base64' });
+        pairingCode = `data:image/png;base64,${screenshot}`;
+        
+        console.log('[PAIRING] SUCCESS! Photo captured.');
+        res.json({ message: 'Success', code: pairingCode });
+
+    } catch (err) {
+        console.error('[PAIRING] ERROR:', err.message);
+        res.status(500).json({ error: 'WhatsApp was too slow. Please try again in 10 seconds.' });
     }
 });
 
