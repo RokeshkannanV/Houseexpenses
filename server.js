@@ -77,12 +77,23 @@ async function handlePairingRequest(req, res) {
         const page = client.pupPage;
         if (!page) throw new Error('Browser page not available.');
 
+        // 0. X-RAY VISION FIX: Reload QR Code if it timed out!
+        await page.evaluate(() => {
+            const elements = Array.from(document.querySelectorAll('span, div, button, a'));
+            const reloadBtn = elements.find(e => e.innerText && e.innerText.toLowerCase().includes('click to reload'));
+            if (reloadBtn) reloadBtn.click();
+        });
+        
+        // Give it a quick 2s to refresh the session
+        await new Promise(r => setTimeout(r, 2000));
+
         // 1. Click Link with Phone Number
         await page.evaluate(() => {
             const elements = Array.from(document.querySelectorAll('span, div, button, a'));
             const el = elements.find(e => e.innerText && e.innerText.toLowerCase().includes('link with phone number'));
             if (el) el.click();
         });
+
         
         await new Promise(r => setTimeout(r, 3000));
 
