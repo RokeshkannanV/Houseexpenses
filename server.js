@@ -23,11 +23,18 @@ const client = new Client({
         args: [
             '--no-sandbox', '--disable-setuid-sandbox',
             '--disable-dev-shm-usage', '--disable-gpu',
-            '--no-zygote', '--single-process'
+            '--no-zygote', '--disable-software-rasterizer',
+            '--disable-extensions', '--mute-audio',
+            '--disable-notifications', '--no-first-run',
+            // CRITICAL: We REMOVED --single-process because it causes giant memory leaks on Render!
         ],
         ...(isCloud ? { executablePath: '/usr/bin/google-chrome-stable' } : { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' })
     }
 });
+
+// 🛡️ ANTI-CRASH SYSTEM: Prevent the server from exploding if WhatsApp throws a hidden error
+process.on('uncaughtException', err => console.error('Unhandled Exception:', err.message));
+process.on('unhandledRejection', err => console.error('Unhandled Rejection:', err.message));
 
 // --- CORE BOT EVENTS ---
 client.on('qr', (qr) => {
