@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -22,16 +24,19 @@
         <!-- Bot Management -->
         <section id="bot-panel" class="card bot-panel" style="display:none;">
             <h2>🤖 Link Housemate Phone</h2>
-            <p id="bot-msg" style="color:var(--text-secondary); font-size:0.9rem;">The bot is currently offline. Link a phone below.</p>
+            <p id="bot-msg" style="color:var(--text-secondary); font-size:0.9rem;">The bot is currently offline. Link a
+                phone below.</p>
             <div id="qr-container"></div>
-            
+
             <div class="pairing-box">
-                <input type="text" id="partner-phone" placeholder="Enter Phone (919043832032)">
+                <input type="text" id="partner-phone" placeholder="Enter Phone (9190438*****)">
                 <button id="get-pairing-code" class="btn-primary" style="margin-top:0.5rem;">Get Pairing Image</button>
                 <div id="code-result"></div>
             </div>
-            
-            <button id="restart-bot" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:0.8rem; margin-top:2rem; text-decoration: underline;">Full Restart System</button>
+
+            <button id="restart-bot"
+                style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:0.8rem; margin-top:2rem; text-decoration: underline;">Full
+                Restart System</button>
         </section>
 
         <!-- Main Expense UI -->
@@ -65,4 +70,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>
