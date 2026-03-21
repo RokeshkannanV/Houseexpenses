@@ -185,6 +185,21 @@ input:focus {
     margin-top: 1rem;
 }
 
+.pairing-box {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+#partner-phone {
+    max-width: 300px;
+    text-align: center;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+
 .btn-delete {
     background: transparent;
     border: none;
