@@ -2,38 +2,43 @@
 let lastState = '';
 
 async function checkBotStatus() {
-    const res = await fetch('/api/bot-status');
-    const status = await res.json();
-    
-    // ONLY UPDATE IF THE STATE CHANGED (Prevents flickering/refreshing feel)
-    const currentState = JSON.stringify(status);
-    if (currentState === lastState) return;
-    lastState = currentState;
-
-    const dot = document.getElementById('status-dot');
-    const text = document.getElementById('status-text');
-    const panel = document.getElementById('bot-panel');
-    const qrContainer = document.getElementById('qr-container');
-
-    if (status.ready) {
-        dot.className = 'status-dot connected';
-        text.innerText = '● Connected';
-        panel.style.display = 'none';
-        document.getElementById('entry-form').style.display = 'block';
-    } else {
-        dot.className = 'status-dot disconnected';
-        text.innerText = '○ Bot Offline';
-        panel.style.display = 'block';
-        document.getElementById('entry-form').style.display = 'none';
+    try {
+        const res = await fetch('/api/bot-status');
+        if (!res.ok) return; // Ignore temporary 502s during heavy sync!
+        const status = await res.json();
         
-        if (status.qr && !status.pairingCode) {
-            qrContainer.innerHTML = `
-                <div class="qr-box" style="background:white; padding:1rem; border-radius:1rem; display:inline-block;">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(status.qr)}" />
-                </div>
-                <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.6;">Scan QR or use phone link below</p>
-            `;
+        // ONLY UPDATE IF THE STATE CHANGED (Prevents flickering/refreshing feel)
+        const currentState = JSON.stringify(status);
+        if (currentState === lastState) return;
+        lastState = currentState;
+
+        const dot = document.getElementById('status-dot');
+        const text = document.getElementById('status-text');
+        const panel = document.getElementById('bot-panel');
+        const qrContainer = document.getElementById('qr-container');
+
+        if (status.ready) {
+            dot.className = 'status-dot connected';
+            text.innerText = '● Connected';
+            panel.style.display = 'none';
+            document.getElementById('entry-form').style.display = 'block';
+        } else {
+            dot.className = 'status-dot disconnected';
+            text.innerText = '○ Bot Offline';
+            panel.style.display = 'block';
+            document.getElementById('entry-form').style.display = 'none';
+            
+            if (status.qr && !status.pairingCode) {
+                qrContainer.innerHTML = `
+                    <div class="qr-box" style="background:white; padding:1rem; border-radius:1rem; display:inline-block;">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(status.qr)}" />
+                    </div>
+                    <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.6;">Scan QR or use phone link below</p>
+                `;
+            }
         }
+    } catch (e) {
+        // Silently wait for the server to finish its heavy sync task
     }
 }
 

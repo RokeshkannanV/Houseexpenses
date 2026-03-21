@@ -26,6 +26,7 @@ const client = new Client({
             '--no-zygote', '--disable-software-rasterizer',
             '--disable-extensions', '--mute-audio',
             '--disable-notifications', '--no-first-run',
+            '--blink-settings=imagesEnabled=false',
             // CRITICAL: We REMOVED --single-process because it causes giant memory leaks on Render!
         ],
         ...(isCloud ? { executablePath: '/usr/bin/google-chrome-stable' } : { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' })
@@ -47,7 +48,7 @@ client.on('qr', (qr) => {
 client.on('ready', () => {
     botStatus.ready = true;
     botStatus.qr = null;
-    lastQR = null;
+    lastQR = "";
     pairingCode = null;
     console.log('✅ Bot is ready.');
 });
@@ -66,16 +67,16 @@ app.get('/api/bot-status', (req, res) => {
 async function handlePairingRequest(req, res) {
     let { phone } = req.body;
     if (!phone) return res.status(400).json({ error: 'Phone is required' });
-    
-    phone = phone.replace(/\D/g, ''); 
-    
+
+    phone = phone.replace(/\D/g, '');
+
     try {
         console.log(`[PAIRING] Requesting official code for ${phone}...`);
-        
+
         if (botStatus.ready) {
             return res.status(400).json({ error: 'Bot is already connected.', alreadyConnected: true });
         }
-        
+
         if (!lastQR && !botStatus.qr) {
             return res.status(503).json({ error: 'Bot is still initializing. Wait 15s and try again.' });
         }
@@ -90,7 +91,7 @@ async function handlePairingRequest(req, res) {
             const reloadBtn = elements.find(e => e.innerText && e.innerText.toLowerCase().includes('click to reload'));
             if (reloadBtn) reloadBtn.click();
         });
-        
+
         // Give it a quick 2s to refresh the session
         await new Promise(r => setTimeout(r, 2000));
 
@@ -106,7 +107,7 @@ async function handlePairingRequest(req, res) {
             throw new Error('WhatsApp has blocked the "Phone Number" feature for this cloud server. See Alternative Solution below.');
         }
 
-        
+
         await new Promise(r => setTimeout(r, 3000));
 
         // 2. Type Phone Number and Enter
@@ -130,11 +131,11 @@ async function handlePairingRequest(req, res) {
                 // Try to find exact code grid (divs with data-ref)
                 const digits = Array.from(document.querySelectorAll('div[data-ref]')).map(d => d.innerText).join('');
                 if (digits && digits.length >= 8) return digits.substring(0, 8);
-                
+
                 // Fallback: look for exactly 8 letter/number code matching the format
                 const anyCode = Array.from(document.querySelectorAll('span, div'))
-                                    .map(e => e.innerText)
-                                    .find(t => t && /^[A-Z0-9]{4}[ -]?[A-Z0-9]{4}$/.test(t));
+                    .map(e => e.innerText)
+                    .find(t => t && /^[A-Z0-9]{4}[ -]?[A-Z0-9]{4}$/.test(t));
                 return anyCode ? anyCode.replace(/[^A-Z0-9]/g, '').substring(0, 8) : null;
             });
 
