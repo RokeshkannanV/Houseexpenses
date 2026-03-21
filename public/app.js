@@ -136,7 +136,7 @@ document.getElementById('save-btn').addEventListener('click', async () => {
 document.getElementById('get-pairing-code').addEventListener('click', async () => {
     const phone = document.getElementById('partner-phone').value;
     if (!phone) return alert('Enter phone with country code');
-    document.getElementById('code-result').innerHTML = '<p style="margin-top:1rem; opacity:0.5;">Activating Remote Eye... please wait</p>';
+    document.getElementById('code-result').innerHTML = '<p style="margin-top:1rem; color:var(--primary); font-weight:bold;">⚡ Bot is generating your code... (15s)</p>';
     const res = await fetch('/api/bot-pairing-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

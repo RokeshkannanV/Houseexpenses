@@ -56,61 +56,81 @@ app.get('/api/bot-status', (req, res) => {
     }
 });
 
-// Request pairing code via API (The Super-Clean Final Fix)
+// Request pairing code via API (The Ironclad Final Fix)
 app.post('/api/bot-pairing-code', async (req, res) => {
     let { phone } = req.body;
     phone = phone.replace(/\D/g, ''); 
     
     try {
-        console.log(`[PAIRING] Fresh start for ${phone}...`);
+        console.log(`[PAIRING] Ironclad Protocol starting for ${phone}...`);
         const page = client.pupPage;
-        if (!page) return res.status(503).json({ error: 'Bot is waking up. Wait 10s.' });
+        if (!page) {
+            console.log('[PAIRING] ERROR: Page not found, attempting recovery...');
+            return res.status(503).json({ error: 'Bot is still waking up. Please wait 15s and try again.' });
+        }
 
-        // 1. REFRESH EVERYTHING for a clean state
-        await page.reload({ waitUntil: 'networkidle2' });
-        await new Promise(r => setTimeout(r, 6000));
-
-        // 2. Click "Link with phone number"
+        // 1. Force Click "Link with phone number"
         await page.evaluate(() => {
-            const el = Array.from(document.querySelectorAll('span, div, button, a'))
-                        .find(e => e.innerText && e.innerText.toLowerCase().includes('link with phone number'));
-            if (el) el.click();
+            const findAndClick = (txt) => {
+                const elements = Array.from(document.querySelectorAll('span, div, button, a'));
+                const el = elements.find(e => e.innerText && e.innerText.toLowerCase().includes(txt.toLowerCase()));
+                if (el) { el.click(); return true; }
+                return false;
+            };
+            findAndClick('link with phone number');
         });
         
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000));
 
-        // 3. Type number and ENTER
+        // 2. Clear and Type Phone Number
         await page.evaluate((ph) => {
             const input = document.querySelector('input');
             if (input) {
+                input.value = ''; // CLEAR
                 input.focus();
                 input.value = ph;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }, phone);
+
+        await new Promise(r => setTimeout(r, 1000));
         await page.keyboard.press('Enter');
 
-        // 4. WAIT and SEARCH for the 8-digit pattern
-        console.log('[PAIRING] Searching for code pattern...');
-        await new Promise(r => setTimeout(r, 6000)); // Wait for animation
+        // 3. WAIT AND EXTRACT THE CODE (The Intelligent Way)
+        console.log('[PAIRING] Searching for code in DOM...');
+        let codeFound = null;
         
-        const codeText = await page.evaluate(() => {
-            // Find ALL div contents and look for an 8-character string with letters and numbers
-            const allText = Array.from(document.querySelectorAll('div, span'))
-                                .map(e => e.innerText)
-                                .filter(t => t && t.length >= 8 && t.length <= 10 && /^[A-Z0-9]+[ -]?[A-Z0-9]+$/.test(t));
-            return allText[0] || null;
-        });
+        // Check for 15 seconds continuously
+        for (let i = 0; i < 15; i++) {
+            const text = await page.evaluate(() => {
+                // Look for the specific grid of 8 characters
+                const digits = Array.from(document.querySelectorAll('div[data-ref]'))
+                                    .map(d => d.innerText).join('');
+                if (digits && digits.length >= 8) return digits.substring(0, 8);
+                
+                // Fallback: Look for any 8-char code pattern
+                const anyCode = Array.from(document.querySelectorAll('span, div'))
+                                    .map(e => e.innerText)
+                                    .find(t => t && /^[A-Z0-9]{4}[ -]?[A-Z0-9]{4}$/.test(t));
+                return anyCode || null;
+            });
 
-        if (!codeText) throw new Error('Could not find the code. Please try again.');
+            if (text) {
+                codeFound = text;
+                break;
+            }
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        if (!codeFound) throw new Error('Code did not appear. Please refresh and try once more.');
         
-        pairingCode = codeText;
-        console.log(`[PAIRING] SUCCESS! Code: ${codeText}`);
-        res.json({ message: 'Success', code: codeText });
+        pairingCode = codeFound;
+        console.log(`[PAIRING] SUCCESS! Text Code: ${codeFound}`);
+        res.json({ message: 'Success', code: codeFound });
 
     } catch (err) {
-        console.error('[PAIRING] FAILED:', err.message);
-        res.status(500).json({ error: 'WhatsApp was too slow. Wait 10s and try again.' });
+        console.error('[PAIRING] ERROR:', err.message);
+        res.status(500).json({ error: 'WhatsApp is slow. Refresh and try one last time in 10s.' });
     }
 });
 
