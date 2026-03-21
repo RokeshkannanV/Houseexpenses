@@ -140,6 +140,17 @@ async function handlePairingRequest(req, res) {
 app.post('/api/bot-pairing-code', handlePairingRequest);
 app.post('/api/request-pairing-code', handlePairingRequest);
 
+// DEBUG VISION: Let's see what the cloud browser is actually stuck on!
+app.get('/api/debug-screenshot', async (req, res) => {
+    try {
+        if (!client.pupPage) return res.status(503).send('Browser not ready yet');
+        const buffer = await client.pupPage.screenshot({ fullPage: true });
+        res.set('Content-Type', 'image/png');
+        res.send(buffer);
+    } catch (e) {
+        res.status(500).send(`Screenshot failed: ${e.message}`);
+    }
+});
 
 app.get('/api/expenses', (req, res) => {
     const rows = db.prepare('SELECT * FROM expenses ORDER BY date DESC').all();
