@@ -21,12 +21,14 @@ const client = new Client({
     puppeteer: {
         headless: true,
         args: [
-            '--no-sandbox', '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage', '--disable-gpu',
-            '--no-zygote', '--disable-software-rasterizer',
-            '--disable-extensions', '--mute-audio',
-            '--disable-notifications', '--no-first-run',
-            // CRITICAL: We REMOVED --single-process because it causes giant memory leaks on Render!
+            '--no-sandbox', 
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage', 
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run', 
+            '--no-zygote', 
+            '--single-process', 
+            '--disable-gpu'
         ],
         ...(isCloud ? { executablePath: '/usr/bin/google-chrome-stable' } : { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' })
     }
