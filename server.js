@@ -18,12 +18,6 @@ let pairingCodePhone = null;
 
 const client = new Client({
     authStrategy: new LocalAuth(),
-    // Pin to a stable version for cloud compatibility
-    webVersion: '2.2412.54',
-    webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
-    },
     puppeteer: {
         headless: true,
         args: [
@@ -92,10 +86,7 @@ async function handlePairingRequest(req, res) {
         res.json({ success: true, message: 'Success', code: pairingCode });
     } catch (err) {
         console.error('[PAIRING] ERROR:', err.message);
-        let msg = 'WhatsApp was too slow. Try again in 15 seconds.';
-        if (err.message.includes('rate')) msg = 'Too many attempts. Wait 60 seconds.';
-        if (err.message.includes('registered')) msg = 'Phone number not registered on WhatsApp.';
-        res.status(500).json({ error: msg });
+        res.status(500).json({ error: `WhatsApp API Error: ${err.message}` });
     }
 }
 
