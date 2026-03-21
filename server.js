@@ -66,17 +66,25 @@ app.get('/api/bot-status', (req, res) => {
     res.json({ ...botStatus, qr: botStatus.qr || lastQR, pairingCode });
 });
 
-// Request pairing code via API (The Turbo Official Way)
+// Request pairing code via API (The Turbo Official Way - Sanitized)
 app.post('/api/bot-pairing-code', async (req, res) => {
-    const { phone } = req.body;
+    let { phone } = req.body;
     try {
+        // CLEAN THE PHONE (Remove +, spaces, or wrong characters)
+        phone = phone.replace(/\D/g, ''); 
+        
         console.log(`[PAIRING] Requesting official code for ${phone}...`);
         
         if (botStatus.ready) {
             return res.status(400).json({ error: 'Bot is already connected!' });
         }
 
-        // The Official Fast Way!
+        if (!phone || phone.length < 10) {
+            return res.status(400).json({ error: 'Invalid phone number format (e.g., 919043832032)' });
+        }
+
+        // The Official Fast Way (with a 2-second buffer)!
+        await new Promise(r => setTimeout(r, 2000));
         const code = await client.requestPairingCode(phone);
         
         pairingCode = code;
@@ -84,7 +92,9 @@ app.post('/api/bot-pairing-code', async (req, res) => {
         res.json({ message: 'Success', code: code });
     } catch (err) {
         console.error('[PAIRING] ERROR:', err.message);
-        res.status(500).json({ error: 'Could not generate code. Please refresh the page and try again.' });
+        res.status(500).json({ 
+            error: 'WhatsApp was too slow to respond. Please: 1. Wait 30 seconds, 2. Refresh the page, 3. Try again.' 
+        });
     }
 });
 
