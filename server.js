@@ -59,6 +59,57 @@ client.on('auth_failure', (msg) => {
     console.error('Auth failure:', msg);
 });
 
+// --- WHATSAPP MESSAGE LISTENER (Add Expense via Text) ---
+client.on('message', async (msg) => {
+    try {
+        if (!botStatus.ready) return;
+
+        // Extract sender's phone number without the '@c.us' part
+        const senderNumber = msg.from.split('@')[0];
+        
+        // 1. Check if the sender is one of the 3 authorized housing members
+        const users = db.prepare('SELECT * FROM users').all();
+        const user = users.find(u => u.phone === senderNumber);
+        
+        // If it's an unauthorized random number, completely ignore
+        if (!user) return;
+
+        const text = msg.body.trim();
+        
+        // 2. Look for an amount in the message
+        const parts = text.split(/\s+/);
+        const amountStr = parts.find(p => !isNaN(parseFloat(p)));
+        
+        if (!amountStr) {
+            // Reply with instructions if they just said "hi" or didn't provide a number
+            return msg.reply('❌ Please include the amount in your message to add an expense.\\n*Example:* 500 for groceries');
+        }
+        
+        const amount = parseFloat(amountStr);
+        
+        // 3. Extract the description (everything except the amount and common English filler words)
+        const fillerWords = ['spent', 'paid', 'rs', 'rupees', 'for', 'on', 'bought'];
+        const descriptionChunks = parts.filter(p => isNaN(parseFloat(p)) && !fillerWords.includes(p.toLowerCase()));
+        const description = descriptionChunks.join(' ') || 'Miscellaneous';
+        
+        // 4. Get the current date in local format
+        const date = new Date();
+        const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+        // 5. Insert directly into Database
+        const stmt = db.prepare('INSERT INTO expenses (description, amount, paid_by, date) VALUES (?, ?, ?, ?)');
+        stmt.run(description, amount, user.name, localDate);
+        
+        // 6. Notify the whole group using the existing notify function
+        // (This will act as the confirmation for the sender too!)
+        notifyAll(description, amount, user.name, localDate);
+
+    } catch (e) {
+        console.error('WhatsApp message error:', e);
+        msg.reply('❌ Sorry, I hit an error trying to save that expense.');
+    }
+});
+
 // --- API ENDPOINTS ---
 app.get('/api/bot-status', (req, res) => {
     res.json({ ...botStatus, qr: botStatus.qr || lastQR, pairingCode, pairingCodePhone });
